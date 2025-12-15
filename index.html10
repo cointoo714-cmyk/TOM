@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>STONE RAID – Hard Mode</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  body {
+    margin: 0;
+    background: #0f172a;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    text-align: center;
+  }
+  canvas {
+    background: #020617;
+    display: block;
+    margin: auto;
+    border: 2px solid #334155;
+  }
+  .hud {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px;
+    background: #020617;
+    font-size: 14px;
+  }
+  button {
+    padding: 10px 18px;
+    margin: 6px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    background: #22c55e;
+    color: #000;
+  }
+</style>
+</head>
+
+<body>
+
+<h2>STONE RAID – HARD MODE</h2>
+
+<div class="hud">
+  <div>❤️ Life: <span id="life">3</span></div>
+  <div>⚡ Energy: <span id="energy">100</span></div>
+  <div>⭐ Score: <span id="score">0</span></div>
+  <div>🏆 Level: <span id="level">1</span></div>
+</div>
+
+<canvas id="game" width="360" height="520"></canvas>
+
+<button onclick="hit()">HIT</button>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let life = 3;
+let energy = 100;
+let score = 0;
+let level = 1;
+let gameOver = false;
+
+const stones = [];
+const stoneTypes = [
+  { type: "normal", color: "#94a3b8", hp: 1, score: 1 },
+  { type: "hard", color: "#78350f", hp: 3, score: 4 },
+  { type: "fake", color: "#020617", hp: 1, score: -3 },
+  { type: "bomb", color: "#dc2626", hp: 1, bomb: true }
+];
+
+function spawnStone() {
+  const rand = Math.random();
+  let stone;
+
+  if (rand < 0.5) stone = stoneTypes[0];
+  else if (rand < 0.75) stone = stoneTypes[1];
+  else if (rand < 0.9) stone = stoneTypes[2];
+  else stone = stoneTypes[3];
+
+  stones.push({
+    ...stone,
+    x: Math.random() * 280 + 40,
+    y: -40,
+    size: 40,
+    currentHp: stone.hp
+  });
+}
+
+function drawStone(s) {
+  ctx.fillStyle = s.color;
+  ctx.fillRect(s.x - s.size/2, s.y - s.size/2, s.size, s.size);
+}
+
+function update() {
+  if (gameOver) return;
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  stones.forEach(s => {
+    s.y += 1.5 + level * 0.4;
+    drawStone(s);
+
+    if (s.y > canvas.height) {
+      if (s.type !== "fake") life--;
+      s.dead = true;
+    }
+  });
+
+  for (let i = stones.length - 1; i >= 0; i--) {
+    if (stones[i].dead) stones.splice(i, 1);
+  }
+
+  if (life <= 0) endGame();
+
+  document.getElementById("life").innerText = life;
+  document.getElementById("energy").innerText = Math.floor(energy);
+  document.getElementById("score").innerText = score;
+  document.getElementById("level").innerText = level;
+
+  requestAnimationFrame(update);
+}
+
+function hit() {
+  if (gameOver) return;
+  if (energy <= 0) return;
+
+  energy -= 8;
+
+  stones.forEach(s => {
+    if (s.y > 350 && s.y < 430) {
+      s.currentHp--;
+
+      if (s.type === "bomb") {
+        life--;
+        s.dead = true;
+      } 
+      else if (s.currentHp <= 0) {
+        score += s.score || 0;
+        if (score < 0) score = 0;
+        s.dead = true;
+      }
+    }
+  });
+
+  if (score >= level * 12) level++;
+}
+
+function endGame() {
+  gameOver = true;
+  ctx.fillStyle = "red";
+  ctx.font = "30px Arial";
+  ctx.fillText("GAME OVER", 80, 260);
+  ctx.font = "18px Arial";
+  ctx.fillText("Final Score: " + score, 110, 300);
+}
+
+setInterval(() => {
+  if (!gameOver) spawnStone();
+}, 1200);
+
+setInterval(() => {
+  energy += 2;
+  if (energy > 100) energy = 100;
+}, 1000);
+
+update();
+</script>
+
+</body>
+</html>
