@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Coin Breaker - Full Version</title>
+  <style>
+    canvas {
+      background: #222;
+      display: block;
+      margin: 0 auto;
+    }
+    body {
+      text-align: center;
+      color: white;
+      font-family: Arial, sans-serif;
+      background: #111;
+    }
+    #restartBtn {
+      display: none;
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Coin Breaker</h1>
+  <p>Left/Right arrow to move, Break stones and collect coins!</p>
+  <canvas id="gameCanvas" width="500" height="600"></canvas>
+  <button id="restartBtn">Restart Game</button>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // Player
+    const player = {
+      x: canvas.width / 2 - 25,
+      y: canvas.height - 50,
+      width: 50,
+      height: 20,
+      speed: 5
+    };
+
+    let rightPressed = false;
+    let leftPressed = false;
+
+    document.addEventListener("keydown", keyDownHandler);
+    document.addEventListener("keyup", keyUpHandler);
+
+    function keyDownHandler(e) {
+      if (e.key === "ArrowRight") rightPressed = true;
+      else if (e.key === "ArrowLeft") leftPressed = true;
+    }
+
+    function keyUpHandler(e) {
+      if (e.key === "ArrowRight") rightPressed = false;
+      else if (e.key === "ArrowLeft") leftPressed = false;
+    }
+
+    // Game variables
+    let stones = [];
+    let stoneSpeed = 2;
+    const coinRadius = 5;
+    let score = 0;
+    let lives = 3;
+    let level = 1;
+    let gameOver = false;
+
+    // Power-ups
+    let bigHand = false;
+    let scoreMultiplier = 1;
+
+    function spawnStone() {
+      const x = Math.random() * (canvas.width - 40);
+      const size = Math.random() < 0.7 ? 40 : 60; // small or big stone
+      stones.push({x: x, y: -size, size: size, broken: false});
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = bigHand ? "orange" : "yellow";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+    }
+
+    function drawStones() {
+      stones.forEach(stone => {
+        ctx.fillStyle = stone.broken ? "gray" : "brown";
+        ctx.fillRect(stone.x, stone.y, stone.size, stone.size);
+      });
+    }
+
+    function drawCoins() {
+      stones.forEach(stone => {
+        if (stone.broken) {
+          ctx.beginPath();
+          ctx.arc(stone.x + stone.size/2, stone.y + stone.size/2, coinRadius, 0, Math.PI * 2);
+          ctx.fillStyle = "gold";
+          ctx.fill();
+          ctx.closePath();
+        }
+      });
+    }
+
+    function drawScore() {
+      ctx.fillStyle = "white";
+      ctx.font = "20px Arial";
+      ctx.fillText("Score: " + score, 10, 30);
+      ctx.fillText("Lives: " + lives, 10, 60);
+      ctx.fillText("Level: " + level, 10, 90);
+    }
+
+    function updateStones() {
+      stones.forEach(stone => {
+        stone.y += stoneSpeed;
+
+        // Collision with player
+        if (!stone.broken &&
+            stone.y + stone.size >= player.y &&
+            stone.x < player.x + player.width &&
+            stone.x + stone.size > player.x) {
+          stone.broken = true;
+          score += (stone.size > 40 ? 5 : 1) * scoreMultiplier;
+        }
+      });
+
+      // Remove stones that went below canvas
+      for (let i = stones.length - 1; i >= 0; i--) {
+        if (stones[i].y > canvas.height + 50) {
+          if (!stones[i].broken) lives--;
+          stones.splice(i, 1);
+        }
+      }
+
+      // Level up
+      if (score >= level * 20) {
+        level++;
+        stoneSpeed += 0.5; // Increase speed each level
+        // Random power-up activation
+        bigHand = Math.random() < 0.3;
+        scoreMultiplier = Math.random() < 0.3 ? 2 : 1;
+      }
+
+      if (lives <= 0) {
+        gameOver = true;
+        restartBtn.style.display = "inline-block";
+      }
+    }
+
+    function movePlayer() {
+      if (rightPressed && player.x + player.width < canvas.width) player.x += player.speed;
+      if (leftPressed && player.x > 0) player.x -= player.speed;
+    }
+
+    function drawGameOver() {
+      ctx.fillStyle = "red";
+      ctx.font = "40px Arial";
+      ctx.fillText("GAME OVER", canvas.width/2 - 120, canvas.height/2);
+      ctx.font = "20px Arial";
+      ctx.fillText("Final Score: " + score, canvas.width/2 - 70, canvas.height/2 + 40);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!gameOver) {
+        drawPlayer();
+        drawStones();
+        drawCoins();
+        drawScore();
+        movePlayer();
+        updateStones();
+        requestAnimationFrame(draw);
+      } else {
+        drawGameOver();
+      }
+    }
+
+    setInterval(() => {
+      if (!gameOver) spawnStone();
+    }, 1500);
+
+    draw();
+
+    // Restart game
+    restartBtn.addEventListener("click", () => {
+      stones = [];
+      stoneSpeed = 2;
+      score = 0;
+      lives = 3;
+      level = 1;
+      gameOver = false;
+      bigHand = false;
+      scoreMultiplier = 1;
+      restartBtn.style.display = "none";
+      draw();
+    });
+  </script>
+</body>
+</html>
